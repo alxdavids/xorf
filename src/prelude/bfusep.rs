@@ -57,7 +57,7 @@ pub const fn mod3(x: u8) -> u8 {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! bfusep_from_impl(
-    ($keys:ident, ptxt_mod $fpty:ty, max iter $max_iter:expr) => {
+    ($keys:ident, $ptxt_mod:ident, max iter $max_iter:expr) => {
         {
             use libm::round;
             use $crate::{
@@ -69,10 +69,13 @@ macro_rules! bfusep_from_impl(
                 },
                 splitmix64::splitmix64,
             };
+            use hashbrown::HashMap;
+            use libc_print::std_name::println;
 
             #[cfg(debug_assertions)] {
                 use $crate::prelude::all_distinct;
                 debug_assert!(all_distinct($keys), "Binary Fuse filters must be constructed from a collection containing all distinct keys.");
+                debug_assert!($ptxt_mod >= 256, "Binary Fuse filters must be constructed using a plaintext modulus >= 256.");
             }
 
             let arity = 3u32;
@@ -99,7 +102,7 @@ macro_rules! bfusep_from_impl(
             };
             let segment_count_length = segment_count * segment_length;
 
-            let mut fingerprints: Box<[$fpty]> = make_fp_block!(fp_array_len);
+            let mut fingerprints: Box<[u32]> = make_fp_block!(fp_array_len);
 
             let mut rng = 1;
             let mut seed = splitmix64(&mut rng);
@@ -111,6 +114,7 @@ macro_rules! bfusep_from_impl(
             let size_plus_1: usize = size + 1;
             let mut reverse_order: Box<[u64]> = make_block!(with size_plus_1 sets);
             reverse_order[size] = 1;
+            let mut hm_keys = HashMap::new();
 
             let block_bits = {
                 let mut block_bits = 1;
@@ -137,6 +141,7 @@ macro_rules! bfusep_from_impl(
                         segment_index &= (1 << block_bits) - 1;
                     }
                     reverse_order[start_pos[segment_index as usize] as usize] = hash;
+                    hm_keys.insert(hash, *key);
                     start_pos[segment_index as usize] += 1;
                 }
 
@@ -249,7 +254,7 @@ macro_rules! bfusep_from_impl(
             let size = ultimate_size;
             for i in (0..size).rev() {
                 let hash = reverse_order[i];
-                let xor2 = (fingerprint!(hash) as $fpty);
+                let key = hm_keys.get(&hash).unwrap();
                 let (index1, index2, index3) = hash_of_hash(hash, segment_length, segment_length_mask, segment_count_length);
                 let found = reverse_h[i] as usize;
 		            h012[0] = index1;
@@ -257,11 +262,11 @@ macro_rules! bfusep_from_impl(
 		            h012[2] = index3;
 		            h012[3] = h012[0];
 		            h012[4] = h012[1];
-		            let entry =
-                      hash
-                    + fingerprints[h012[found + 1] as usize]
-                    + fingerprints[h012[found + 2] as usize];
-                    fingerprints[h012[found] as usize] = entry % ptxt_mod;
+		        let entry =
+                (key % $ptxt_mod) as u32
+                - fingerprints[h012[found + 1] as usize]
+                - fingerprints[h012[found + 2] as usize] % ($ptxt_mod as u32);
+                fingerprints[h012[found] as usize] = entry % ($ptxt_mod as u32);
             }
 
             Ok(Self {
@@ -270,7 +275,7 @@ macro_rules! bfusep_from_impl(
                 segment_length_mask,
                 segment_count_length,
                 fingerprints,
-                ptxt_mod
+                $ptxt_mod
             })
         }
     };
@@ -293,7 +298,7 @@ macro_rules! bfusep_contains_impl(
             let f = $self.fingerprints[h0 as usize]
                + $self.fingerprints[h1 as usize]
                + $self.fingerprints[h2 as usize];
-            f % $self.ptxt_mod
+            ($key % $self.ptxt_mod) as u32 == f % ($self.ptxt_mod as u32)
         }
     };
 );

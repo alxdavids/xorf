@@ -1,5 +1,7 @@
 //! Common methods for xor filters.
 
+#[cfg(feature = "binary-fuse-modp")]
+pub mod bfusep;
 #[cfg(feature = "binary-fuse")]
 pub mod bfuse;
 pub mod fuse;

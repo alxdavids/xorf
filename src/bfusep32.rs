@@ -2,7 +2,6 @@
 
 use crate::{bfusep_contains_impl, bfusep_from_impl, Filter};
 use alloc::{boxed::Box, vec::Vec};
-use core::convert::TryFrom;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -63,7 +62,7 @@ pub struct BinaryFuseP32 {
     segment_count_length: u32,
     /// The fingerprints for the filter
     pub fingerprints: Box<[u32]>,
-    ptxt_mod: u32,
+    ptxt_mod: u64,
 }
 
 impl Filter<u64> for BinaryFuseP32 {
@@ -80,12 +79,13 @@ impl Filter<u64> for BinaryFuseP32 {
 }
 
 impl BinaryFuseP32 {
-    pub fn from_slice(&self, keys: &[u64], ptxt_mod: u32) -> Self {
+    pub fn from_slice(keys: &[u64], ptxt_mod: u64) -> Result<Self, &'static str> {
         bfusep_from_impl!(keys, ptxt_mod, max iter 1_000)
     }
 
-    pub fn from_vec(&self, keys: Vec<u64>, ptxt_mod: u32) -> Self {
-        bfusep_from_impl!(keys.as_slice(), ptxt_mod, max iter 1_000)
+    pub fn from_vec(keys: Vec<u64>, ptxt_mod: u64) -> Result<Self, &'static str> {
+        let slice = keys.as_slice();
+        bfusep_from_impl!(slice, ptxt_mod, max iter 1_000)
     }
 }
 
@@ -100,11 +100,11 @@ mod test {
     #[test]
     fn test_initialization() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        const ptxt_mod: u32 = 1024;
+        const PTXT_MOD: u64 = 1024;
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = BinaryFuseP32::from_slice(&keys, ptxt_mod).unwrap();
+        let filter = BinaryFuseP32::from_slice(&keys, PTXT_MOD).unwrap();
 
         for key in keys {
             assert!(filter.contains(&key));
@@ -114,24 +114,24 @@ mod test {
     #[test]
     fn test_bits_per_entry() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        const ptxt_mod: u32 = 1024;
+        const PTXT_MOD: u64 = 1024;
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = BinaryFuseP32::from_slice(&keys, ptxt_mod).unwrap();
-        let bpe = (filter.len() as f64) * 32.0 / (SAMPLE_SIZE as f64);
+        let filter = BinaryFuseP32::from_slice(&keys, PTXT_MOD).unwrap();
+        let bpe = (filter.len() as f64) * (PTXT_MOD as f64).log(2.0) / (SAMPLE_SIZE as f64);
 
-        assert!(bpe < 36.2, "Bits per entry is {}", bpe);
+        assert!(bpe < (PTXT_MOD as f64).log(2.0) + 2.0, "Bits per entry is {}", bpe);
     }
 
     #[test]
     fn test_false_positives() {
         const SAMPLE_SIZE: usize = 1_000_000;
-        const ptxt_mod: u32 = 1024;
+        const PTXT_MOD: u64 = 1024;
         let mut rng = rand::thread_rng();
         let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
 
-        let filter = BinaryFuseP32::from_slice(&keys, ptxt_mod).unwrap();
+        let filter = BinaryFuseP32::from_slice(&keys, PTXT_MOD).unwrap();
 
         let false_positives: usize = (0..SAMPLE_SIZE)
             .map(|_| rng.gen())
@@ -139,7 +139,7 @@ mod test {
             .count();
         let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
         assert!(
-            fp_rate < 0.0000000000000001,
+            fp_rate < (0.426 * 256.0) / (PTXT_MOD as f64),
             "False positive rate is {}",
             fp_rate
         );
@@ -151,6 +151,15 @@ mod test {
         expected = "Binary Fuse filters must be constructed from a collection containing all distinct keys."
     )]
     fn test_debug_assert_duplicates() {
-        let _ = BinaryFuseP32::try_from(vec![1, 2, 1]);
+        let _ = BinaryFuseP32::from_vec(vec![1, 2, 1], 1024);
+    }
+
+    #[test]
+    #[cfg(debug_assertions)]
+    #[should_panic(
+        expected = "Binary Fuse filters must be constructed using a plaintext modulus >= 256."
+    )]
+    fn test_debug_assert_ptxt_mod() {
+        let _ = BinaryFuseP32::from_vec(vec![1, 2], 128);
     }
 }
