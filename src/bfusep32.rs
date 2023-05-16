@@ -27,8 +27,9 @@ use serde::{Deserialize, Serialize};
 ///
 /// # let mut rng = rand::thread_rng();
 /// const SAMPLE_SIZE: usize = 1_000_000;
+/// const PTXT_MOD: u64 = 1_024;
 /// let keys: Vec<u64> = (0..SAMPLE_SIZE).map(|_| rng.gen()).collect();
-/// let filter = BinaryFuseP32::try_from(&keys).unwrap();
+/// let filter = BinaryFuseP32::from_slice(&keys, PTXT_MOD).unwrap();
 ///
 /// // no false negatives
 /// for key in keys {
@@ -37,7 +38,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// // bits per entry
 /// let bpe = (filter.len() as f64) * 32.0 / (SAMPLE_SIZE as f64);
-/// assert!(bpe < 36.2, "Bits per entry is {}", bpe);
+/// assert!(bpe < (PTXT_MOD as f64).log(2.0) + 2.0, "Bits per entry is {}", bpe);
 ///
 /// // false positive rate
 /// let false_positives: usize = (0..SAMPLE_SIZE)
@@ -45,7 +46,7 @@ use serde::{Deserialize, Serialize};
 ///     .filter(|n| filter.contains(n))
 ///     .count();
 /// let fp_rate: f64 = (false_positives * 100) as f64 / SAMPLE_SIZE as f64;
-/// assert!(fp_rate < 0.0000000000000001, "False positive rate is {}", fp_rate);
+/// assert!(fp_rate < (0.426 * 256.0) / (PTXT_MOD as f64), "False positive rate is {}", fp_rate);
 /// ```
 ///
 /// Serializing and deserializing `BinaryFuseP32` filters can be enabled with the [`serde`] feature.

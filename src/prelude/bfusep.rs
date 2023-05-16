@@ -70,7 +70,6 @@ macro_rules! bfusep_from_impl(
                 splitmix64::splitmix64,
             };
             use hashbrown::HashMap;
-            use libc_print::std_name::println;
 
             #[cfg(debug_assertions)] {
                 use $crate::prelude::all_distinct;
