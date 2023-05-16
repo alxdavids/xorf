@@ -56,12 +56,11 @@ pub const fn mod3(x: u8) -> u8 {
 /// Implements `try_from(&[u64])` for an binary fuse filter of fingerprint type `$fpty`.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! bfuse_from_impl(
-    ($keys:ident fingerprint $fpty:ty, max iter $max_iter:expr) => {
+macro_rules! bfusep_from_impl(
+    ($keys:ident, ptxt_mod $fpty:ty, max iter $max_iter:expr) => {
         {
             use libm::round;
             use $crate::{
-                fingerprint,
                 make_block,
                 make_fp_block,
                 prelude::{
@@ -258,10 +257,11 @@ macro_rules! bfuse_from_impl(
 		            h012[2] = index3;
 		            h012[3] = h012[0];
 		            h012[4] = h012[1];
-		            fingerprints[h012[found] as usize] =
-                      xor2
+		            let entry =
+                      hash
                     + fingerprints[h012[found + 1] as usize]
                     + fingerprints[h012[found + 2] as usize];
+                    fingerprints[h012[found] as usize] = entry % ptxt_mod;
             }
 
             Ok(Self {
@@ -270,6 +270,7 @@ macro_rules! bfuse_from_impl(
                 segment_length_mask,
                 segment_count_length,
                 fingerprints,
+                ptxt_mod
             })
         }
     };
@@ -278,8 +279,8 @@ macro_rules! bfuse_from_impl(
 /// Implements `contains(u64)` for a binary fuse filter with recovery modulo `ptxt_mod`.
 #[doc(hidden)]
 #[macro_export]
-macro_rules! bfuse_contains_impl(
-    ($key:expr, $self:expr, ptxt_mod $fpty:ty) => {
+macro_rules! bfusep_contains_impl(
+    ($key:expr, $self:expr) => {
         {
             use $crate::{
                 prelude::{
@@ -292,7 +293,7 @@ macro_rules! bfuse_contains_impl(
             let f = $self.fingerprints[h0 as usize]
                + $self.fingerprints[h1 as usize]
                + $self.fingerprints[h2 as usize];
-            f % ptxt_mod
+            f % $self.ptxt_mod
         }
     };
 );

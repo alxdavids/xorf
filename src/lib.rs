@@ -79,6 +79,8 @@ mod murmur3;
 mod prelude;
 mod splitmix64;
 
+#[cfg(feature = "binary-fuse-modp")]
+mod bfusep32;
 #[cfg(feature = "binary-fuse")]
 mod bfuse16;
 #[cfg(feature = "binary-fuse")]
@@ -93,6 +95,8 @@ mod xor16;
 mod xor32;
 mod xor8;
 
+#[cfg(feature = "binary-fuse-modp")]
+pub use bfusep32::BinaryFuseP32;
 #[cfg(feature = "binary-fuse")]
 pub use bfuse16::BinaryFuse16;
 #[cfg(feature = "binary-fuse")]

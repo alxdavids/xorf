@@ -55,6 +55,7 @@ name = "xor8"
 harness = false
 
 [features]
-default = ["uniform-random", "binary-fuse"]
+default = ["uniform-random", "binary-fuse", "binary-fuse-modp"]
 uniform-random = ["rand"]
 binary-fuse = ["libm"]
+binary-fuse-modp = ["libm"]
