@@ -38,6 +38,12 @@ pub const fn mix(key: u64, seed: u64) -> u64 {
     murmur3::mix64(key.overflowing_add(seed).0)
 }
 
+/// Applies a finalization mix to a randomly-seeded key of multiple u64 values
+#[inline]
+pub fn mix256<'a>(key: &[u64; 4], seed: u64) -> u64 {
+    key.into_iter().map(|k| mix(*k, seed)).fold(0, |acc, r| acc.overflowing_add(r).0)
+}
+
 /// Computes a fingerprint.
 #[doc(hidden)]
 #[macro_export]
@@ -128,6 +134,13 @@ macro_rules! try_enqueue(
 /// Checks if a collection of keys has all distinct values.
 #[cfg(debug_assertions)]
 pub fn all_distinct<'a>(keys: impl IntoIterator<Item = &'a u64>) -> bool {
+    let mut s = alloc::collections::BTreeSet::new();
+    keys.into_iter().all(move |x| s.insert(x))
+}
+
+/// Checks if a collection of keys has all distinct values.
+#[cfg(debug_assertions)]
+pub fn all_distinct256<'a>(keys: impl IntoIterator<Item = &'a [u64; 4]>) -> bool {
     let mut s = alloc::collections::BTreeSet::new();
     keys.into_iter().all(move |x| s.insert(x))
 }

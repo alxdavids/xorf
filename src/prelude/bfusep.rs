@@ -57,14 +57,14 @@ const fn mod3(x: u8) -> u8 {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! bfusep_from_impl(
-    ($keys:ident, $ptxt_mod:ident, max iter $max_iter:expr) => {
+    ($keys:ident, $data:ident, $ptxt_mod:ident, max iter $max_iter:expr) => {
         {
             use libm::round;
             use $crate::{
                 make_block,
                 make_fp_block,
                 prelude::{
-                    mix,
+                    mix256,
                     bfuse::{segment_length, size_factor, hash_of_hash, mod3},
                 },
                 splitmix64::splitmix64,
@@ -72,8 +72,8 @@ macro_rules! bfusep_from_impl(
             use hashbrown::HashMap;
 
             #[cfg(debug_assertions)] {
-                use $crate::prelude::all_distinct;
-                debug_assert!(all_distinct($keys), "Binary Fuse filters must be constructed from a collection containing all distinct keys.");
+                use $crate::prelude::all_distinct256;
+                debug_assert!(all_distinct256($keys), "Binary Fuse filters must be constructed from a collection containing all distinct keys.");
                 debug_assert!($ptxt_mod >= 256, "Binary Fuse filters must be constructed using a plaintext modulus >= 256.");
             }
 
@@ -132,15 +132,15 @@ macro_rules! bfusep_from_impl(
                 for i in 0..start_pos_len {
                     start_pos[i] = (((i as u64) * (size as u64)) >> block_bits) as usize;
                 }
-                for key in $keys.iter() {
-                    let hash = mix(*key, seed);
+                for i in 0..$keys.len() {
+                    let hash = mix256(&$keys[i], seed);
                     let mut segment_index = hash >> (64 - block_bits);
                     while reverse_order[start_pos[segment_index as usize] as usize] != 0 {
                         segment_index += 1;
                         segment_index &= (1 << block_bits) - 1;
                     }
                     reverse_order[start_pos[segment_index as usize] as usize] = hash;
-                    hm_keys.insert(hash, *key);
+                    hm_keys.insert(hash, $data[i]);
                     start_pos[segment_index as usize] += 1;
                 }
 
@@ -253,7 +253,7 @@ macro_rules! bfusep_from_impl(
             let size = ultimate_size;
             for i in (0..size).rev() {
                 let hash = reverse_order[i];
-                let key = hm_keys.get(&hash).unwrap();
+                let data = hm_keys.get(&hash).unwrap();
                 let (index1, index2, index3) = hash_of_hash(hash, segment_length, segment_length_mask, segment_count_length);
                 let found = reverse_h[i] as usize;
 		            h012[0] = index1;
@@ -262,7 +262,7 @@ macro_rules! bfusep_from_impl(
 		            h012[3] = h012[0];
 		            h012[4] = h012[1];
 		        let entry =
-                (key % $ptxt_mod) as u32
+                data % ($ptxt_mod as u32)
                 - fingerprints[h012[found + 1] as usize]
                 - fingerprints[h012[found + 2] as usize] % ($ptxt_mod as u32);
                 fingerprints[h012[found] as usize] = entry % ($ptxt_mod as u32);
@@ -280,24 +280,25 @@ macro_rules! bfusep_from_impl(
     };
 );
 
-/// Implements `contains(u64)` for a binary fuse filter with recovery modulo `ptxt_mod`.
+/// Implements `retrieve(u64)` for a binary fuse filter with recovery modulo `ptxt_mod`.
+/// This allows an implementer to retrieve the data field 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! bfusep_contains_impl(
+macro_rules! bfusep_retrieve_impl(
     ($key:expr, $self:expr) => {
         {
             use $crate::{
                 prelude::{
-                    mix,
+                    mix256,
                     bfuse::hash_of_hash
                 },
             };
-            let hash = mix($key, $self.seed);
+            let hash = mix256($key, $self.seed);
             let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
-            let f = $self.fingerprints[h0 as usize]
+            let data = $self.fingerprints[h0 as usize]
                + $self.fingerprints[h1 as usize]
                + $self.fingerprints[h2 as usize];
-            ($key % $self.ptxt_mod) as u32 == f % ($self.ptxt_mod as u32)
+            data % ($self.ptxt_mod as u32)
         }
     };
 );
