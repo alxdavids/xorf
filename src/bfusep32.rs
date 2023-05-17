@@ -21,7 +21,6 @@ use serde::{Deserialize, Serialize};
 /// ```
 /// # extern crate alloc;
 /// use xorf::{Filter, BinaryFuseP32};
-/// use core::convert::TryFrom;
 /// # use alloc::vec::Vec;
 /// # use rand::Rng;
 ///
@@ -37,7 +36,7 @@ use serde::{Deserialize, Serialize};
 /// }
 ///
 /// // bits per entry
-/// let bpe = (filter.len() as f64) * 32.0 / (SAMPLE_SIZE as f64);
+/// let bpe = (filter.len() as f64) * (PTXT_MOD as f64).log(2.0) / (SAMPLE_SIZE as f64);
 /// assert!(bpe < (PTXT_MOD as f64).log(2.0) + 2.0, "Bits per entry is {}", bpe);
 ///
 /// // false positive rate

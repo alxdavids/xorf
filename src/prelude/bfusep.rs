@@ -4,7 +4,7 @@
 use libm::{floor, fmax, log};
 
 #[inline]
-pub fn segment_length(arity: u32, size: u32) -> u32 {
+fn segment_length(arity: u32, size: u32) -> u32 {
     if size == 0 {
         return 4;
     }
@@ -17,7 +17,7 @@ pub fn segment_length(arity: u32, size: u32) -> u32 {
 }
 
 #[inline]
-pub fn size_factor(arity: u32, size: u32) -> f64 {
+fn size_factor(arity: u32, size: u32) -> f64 {
     match arity {
         3 => fmax(
             1.125_f64,
@@ -29,7 +29,7 @@ pub fn size_factor(arity: u32, size: u32) -> f64 {
 }
 
 #[inline]
-pub const fn hash_of_hash(
+const fn hash_of_hash(
     hash: u64,
     segment_length: u32,
     segment_length_mask: u32,
@@ -45,7 +45,7 @@ pub const fn hash_of_hash(
 }
 
 #[inline]
-pub const fn mod3(x: u8) -> u8 {
+const fn mod3(x: u8) -> u8 {
     if x > 2 {
         x - 3
     } else {
