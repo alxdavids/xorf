@@ -55,10 +55,8 @@ pub struct BinaryFuseP32 {
 }
 
 impl Filter<u64> for BinaryFuseP32 {
-    /// Returns `true` if the filter contains the specified key.
-    /// Has a false positive rate of <0.4%.
-    /// Has no false negatives.
-    fn contains(&self, key: &u64) -> bool {
+    /// unimplemented
+    fn contains(&self, _: &u64) -> bool {
         unimplemented!();
     }
 
@@ -68,6 +66,7 @@ impl Filter<u64> for BinaryFuseP32 {
 }
 
 impl BinaryFuseP32 {
+    /// Creates a new `BinaryFuseP32` filter from the specified `keys` (as a slice), `data`, `ptxt_mod`
     pub fn from_slice(keys: &[[u64; 4]], data: &[u32], ptxt_mod: u64) -> Result<Self, &'static str> {
         if data.len() != keys.len() {
             return Err("The data should correspond to the number of keys");
@@ -75,11 +74,13 @@ impl BinaryFuseP32 {
         bfusep_from_impl!(keys, data, ptxt_mod, max iter 1_000)
     }
 
+    /// Creates a new `BinaryFuseP32` filter from the specified `keys` (as a vector), `data`, `ptxt_mod`
     pub fn from_vec(keys: Vec<[u64; 4]>, data: &[u32], ptxt_mod: u64) -> Result<Self, &'static str> {
         let slice = keys.as_slice();
         bfusep_from_impl!(slice, data, ptxt_mod, max iter 1_000)
     }
 
+    /// Retrieves the `data` modulo the plaintext modulus for a given `key`
     pub fn retrieve(&self, key: &[u64; 4]) -> u32 {
         bfusep_retrieve_impl!(key, self)
     }
