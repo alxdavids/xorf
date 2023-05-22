@@ -57,7 +57,7 @@ const fn mod3(x: u8) -> u8 {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! bfusep_from_impl(
-    ($keys:ident, $data:ident, $ptxt_mod:ident, max iter $max_iter:expr) => {
+    ($seed:ident, $keys:ident, $data:ident, $ptxt_mod:ident, max iter $max_iter:expr) => {
         {
             use libm::round;
             use $crate::{
@@ -133,7 +133,7 @@ macro_rules! bfusep_from_impl(
                     start_pos[i] = (((i as u64) * (size as u64)) >> block_bits) as usize;
                 }
                 for i in 0..$keys.len() {
-                    let hash = mix256(&$keys[i], seed);
+                    let hash = mix256(&$keys[i], $seed);
                     let mut segment_index = hash >> (64 - block_bits);
                     while reverse_order[start_pos[segment_index as usize] as usize] != 0 {
                         segment_index += 1;
@@ -243,7 +243,6 @@ macro_rules! bfusep_from_impl(
                     t2count[i] = 0;
                     t2hash[i] = 0;
                 }
-                seed = splitmix64(&mut rng)
             }
             if !done {
                 return Err("Failed to construct binary fuse filter.");
@@ -269,7 +268,7 @@ macro_rules! bfusep_from_impl(
             }
 
             Ok(Self {
-                seed,
+                $seed,
                 segment_length,
                 segment_length_mask,
                 segment_count_length,

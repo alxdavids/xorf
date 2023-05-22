@@ -40,8 +40,13 @@ pub const fn mix(key: u64, seed: u64) -> u64 {
 
 /// Applies a finalization mix to a randomly-seeded key of multiple u64 values
 #[inline]
-pub fn mix256<'a>(key: &[u64; 4], seed: u64) -> u64 {
-    key.into_iter().map(|k| mix(*k, seed)).fold(0, |acc, r| acc.overflowing_add(r).0)
+pub fn mix256<'a>(key: &[u64; 4], seed: u128) -> u64 {
+    let seedh = (seed >> 64) as u64;
+    let seedl = (seed & 0xffffffffffffffff) as u64;
+    key.into_iter().map(|k| {
+        let mh = mix(*k, seedh);
+        mix(mh, seedl)
+    }).fold(0, |acc, r| acc.overflowing_add(r).0)
 }
 
 /// Computes a fingerprint.

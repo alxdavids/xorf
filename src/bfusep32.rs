@@ -29,7 +29,8 @@ use serde::{Deserialize, Serialize};
 /// const PTXT_MOD: u64 = 1_024;
 /// let keys: Vec<[u64; 4]> = (0..SAMPLE_SIZE).map(|_| [rng.gen(); 4]).collect();
 /// let data: Vec<u32> = (0..SAMPLE_SIZE).map(|i| (i as u32) % (PTXT_MOD as u32)).collect();
-/// let filter = BinaryFuseP32::from_slice(&keys, &data, PTXT_MOD).unwrap();
+/// let seed: u128 = rng.gen_range(0..u128::MAX);
+/// let filter = BinaryFuseP32::from_slice(seed, &keys, &data, PTXT_MOD).unwrap();
 ///
 /// // no false negatives
 /// for i in 0..keys.len() {
@@ -45,7 +46,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug)]
 pub struct BinaryFuseP32 {
-    seed: u64,
+    seed: u128,
     segment_length: u32,
     segment_length_mask: u32,
     segment_count_length: u32,
@@ -67,17 +68,17 @@ impl Filter<u64> for BinaryFuseP32 {
 
 impl BinaryFuseP32 {
     /// Creates a new `BinaryFuseP32` filter from the specified `keys` (as a slice), `data`, `ptxt_mod`
-    pub fn from_slice(keys: &[[u64; 4]], data: &[u32], ptxt_mod: u64) -> Result<Self, &'static str> {
+    pub fn from_slice(seed: u128, keys: &[[u64; 4]], data: &[u32], ptxt_mod: u64) -> Result<Self, &'static str> {
         if data.len() != keys.len() {
             return Err("The data should correspond to the number of keys");
         }
-        bfusep_from_impl!(keys, data, ptxt_mod, max iter 1_000)
+        bfusep_from_impl!(seed, keys, data, ptxt_mod, max iter 1_000)
     }
 
     /// Creates a new `BinaryFuseP32` filter from the specified `keys` (as a vector), `data`, `ptxt_mod`
-    pub fn from_vec(keys: Vec<[u64; 4]>, data: &[u32], ptxt_mod: u64) -> Result<Self, &'static str> {
+    pub fn from_vec(seed: u128, keys: Vec<[u64; 4]>, data: &[u32], ptxt_mod: u64) -> Result<Self, &'static str> {
         let slice = keys.as_slice();
-        bfusep_from_impl!(slice, data, ptxt_mod, max iter 1_000)
+        bfusep_from_impl!(seed, slice, data, ptxt_mod, max iter 1_000)
     }
 
     /// Retrieves the `data` modulo the plaintext modulus for a given `key`
@@ -91,7 +92,7 @@ mod test {
     use crate::{BinaryFuseP32, Filter};
 
     use alloc::vec::Vec;
-    use rand::Rng;
+    use rand::{Rng, RngCore};
 
     #[test]
     fn test_initialization() {
@@ -100,8 +101,9 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<[u64; 4]> = (0..SAMPLE_SIZE).map(|_| [rng.gen(); 4]).collect();
         let data: Vec<u32> = (0..SAMPLE_SIZE).map(|i| (i as u32) % (PTXT_MOD as u32)).collect();
+        let seed: u128 = rng.gen_range(0..u128::MAX);
 
-        let filter = BinaryFuseP32::from_slice(&keys, &data, PTXT_MOD).unwrap();
+        let filter = BinaryFuseP32::from_slice(seed, &keys, &data, PTXT_MOD).unwrap();
 
         for i in 0..keys.len() {
             assert_eq!(data[i], filter.retrieve(&keys[i]));
@@ -115,8 +117,9 @@ mod test {
         let mut rng = rand::thread_rng();
         let keys: Vec<[u64; 4]> = (0..SAMPLE_SIZE).map(|_| [rng.gen(); 4]).collect();
         let data: Vec<u32> = (0..SAMPLE_SIZE).map(|i| (i as u32) % (PTXT_MOD as u32)).collect();
+        let seed: u128 = rng.gen_range(0..u128::MAX);
 
-        let filter = BinaryFuseP32::from_slice(&keys, &data, PTXT_MOD).unwrap();
+        let filter = BinaryFuseP32::from_slice(seed, &keys, &data, PTXT_MOD).unwrap();
         let bpe = (filter.len() as f64) * (PTXT_MOD as f64).log(2.0) / (SAMPLE_SIZE as f64);
 
         assert!(bpe < (PTXT_MOD as f64).log(2.0) + 2.0, "Bits per entry is {}", bpe);
@@ -128,7 +131,7 @@ mod test {
         expected = "Binary Fuse filters must be constructed from a collection containing all distinct keys."
     )]
     fn test_debug_assert_duplicates() {
-        let _ = BinaryFuseP32::from_vec(vec![[1; 4], [2; 4], [1; 4]], &[0, 0, 0], 1024);
+        let _ = BinaryFuseP32::from_vec(1u128, vec![[1; 4], [2; 4], [1; 4]], &[0, 0, 0], 1024);
     }
 
     #[test]
@@ -137,6 +140,6 @@ mod test {
         expected = "Binary Fuse filters must be constructed using a plaintext modulus >= 256."
     )]
     fn test_debug_assert_ptxt_mod() {
-        let _ = BinaryFuseP32::from_vec(vec![[1; 4], [2; 4]], &[0, 0], 128);
+        let _ = BinaryFuseP32::from_vec(1u128, vec![[1; 4], [2; 4]], &[0, 0], 128);
     }
 }
