@@ -49,9 +49,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug)]
 pub struct BinaryFuseP32 {
     seed: [u8; 32],
-    segment_length: u32,
-    segment_length_mask: u32,
-    segment_count_length: u32,
+    /// segment_length
+    pub segment_length: u32,
+    /// segment_length_mask
+    pub segment_length_mask: u32,
+    /// segment_count_length
+    pub segment_count_length: u32,
     /// The fingerprints for the filter
     pub fingerprints: Box<[u32]>,
     ptxt_mod: u64,
