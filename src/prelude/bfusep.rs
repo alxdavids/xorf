@@ -78,7 +78,7 @@ macro_rules! bfusep_from_impl(
                     start_pos[i] = (((i as u64) * (size as u64)) >> block_bits) as usize;
                 }
                 for i in 0..$keys.len() {
-                    let hash = mix256(&$keys[i], $seed);
+                    let hash = mix256(&$keys[i], &$seed);
                     let mut segment_index = hash >> (64 - block_bits);
                     while reverse_order[start_pos[segment_index as usize] as usize] != 0 {
                         segment_index += 1;
@@ -237,7 +237,7 @@ macro_rules! bfusep_retrieve_impl(
                     bfuse::hash_of_hash
                 },
             };
-            let hash = mix256($key, $self.seed);
+            let hash = mix256($key, &$self.seed);
             let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
             let data = $self.fingerprints[h0 as usize]
                + $self.fingerprints[h1 as usize]
@@ -260,7 +260,7 @@ macro_rules! bfusep_hash_eval_impl(
                     bfuse::hash_of_hash
                 },
             };
-            let hash = mix256($key, $self.seed);
+            let hash = mix256($key, &$self.seed);
             let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
             vec![h0 as usize, h1 as usize, h2 as usize]
         }

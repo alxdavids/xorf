@@ -7,6 +7,8 @@ pub mod bfuse;
 pub mod fuse;
 pub mod xor;
 
+use core::convert::TryInto;
+
 use crate::murmur3;
 
 /// A set of hashes indexing three blocks.
@@ -40,12 +42,20 @@ pub const fn mix(key: u64, seed: u64) -> u64 {
 
 /// Applies a finalization mix to a randomly-seeded key of multiple u64 values
 #[inline]
-pub fn mix256<'a>(key: &[u64; 4], seed: u128) -> u64 {
-    let seedh = (seed >> 64) as u64;
-    let seedl = (seed & 0xffffffffffffffff) as u64;
+pub fn mix256<'a>(key: &[u64; 4], seed: &[u8]) -> u64 {
+    let mut seeds = vec![0u64; 4];
+    if seed.len() != 32 {
+        panic!("Incompatible seed length: {}", seed.len());
+    }
+    for i in 0..4 {
+        seeds[i] = u64::from_le_bytes(seed[8*i..8*(i+1)].try_into().unwrap());
+    }
     key.into_iter().map(|k| {
-        let mh = mix(*k, seedh);
-        mix(mh, seedl)
+        let mut mixed = 0u64;
+        for i in 0..4 {
+            mixed = mix(*k, seeds[i]);
+        }
+        mixed
     }).fold(0, |acc, r| acc.overflowing_add(r).0)
 }
 
