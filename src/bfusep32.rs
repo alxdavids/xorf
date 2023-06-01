@@ -88,9 +88,9 @@ impl BinaryFuseP32 {
         bfusep_retrieve_impl!(key, self)
     }
 
-    /// Retrieves the hash function evaluations for a given key
-    pub fn hash_eval(&self, key: &[u64; 4]) -> Vec<usize> {
-        bfusep_hash_eval_impl!(key, self)
+    /// Static function that retrieves the hash function evaluations for a given storage filter
+    pub fn hash_eval(key: &[u64; 4], seed: [u8; 32], segment_length: u32, segment_length_mask: u32, segment_count_length: u32) -> Vec<usize> {
+        bfusep_hash_eval_impl!(key, seed, segment_length, segment_length_mask, segment_count_length)
     }
 }
 
@@ -116,6 +116,25 @@ mod test {
 
         for i in 0..keys.len() {
             assert_eq!(data[i], filter.retrieve(&keys[i]));
+        }
+    }
+
+    #[test]
+    fn test_hashes() {
+        const SAMPLE_SIZE: usize = 1_000_000;
+        const PTXT_MOD: u64 = 1024;
+        let mut rng = rand::thread_rng();
+        let keys: Vec<[u64; 4]> = (0..SAMPLE_SIZE).map(|_| [rng.gen(); 4]).collect();
+        let data: Vec<u32> = (0..SAMPLE_SIZE).map(|i| (i as u32) % (PTXT_MOD as u32)).collect();
+        let mut seed = [0u8; 32];
+        OsRng.fill_bytes(&mut seed);
+
+        let filter = BinaryFuseP32::from_slice(seed, &keys, &data, PTXT_MOD).unwrap();
+
+        for i in 0..keys.len() {
+            let h = BinaryFuseP32::hash_eval(&keys[i], seed, filter.segment_length, filter.segment_length_mask, filter.segment_count_length);
+            let entry = h.iter().fold(0u32, |acc, r| acc.wrapping_add(filter.fingerprints[*r]));
+            assert_eq!(data[i], entry % filter.ptxt_mod as u32);
         }
     }
 

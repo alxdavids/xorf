@@ -206,9 +206,9 @@ macro_rules! bfusep_from_impl(
 		            h012[3] = h012[0];
 		            h012[4] = h012[1];
 		        let entry =
-                data % ($ptxt_mod as u32)
-                - fingerprints[h012[found + 1] as usize]
-                - fingerprints[h012[found + 2] as usize] % ($ptxt_mod as u32);
+                (data % ($ptxt_mod as u32))
+                .wrapping_sub(fingerprints[h012[found + 1] as usize])
+                .wrapping_sub(fingerprints[h012[found + 2] as usize]) % ($ptxt_mod as u32);
                 fingerprints[h012[found] as usize] = entry % ($ptxt_mod as u32);
             }
 
@@ -239,9 +239,7 @@ macro_rules! bfusep_retrieve_impl(
             };
             let hash = mix256($key, &$self.seed);
             let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
-            let data = $self.fingerprints[h0 as usize]
-               + $self.fingerprints[h1 as usize]
-               + $self.fingerprints[h2 as usize];
+            let data = $self.fingerprints[h0 as usize].wrapping_add($self.fingerprints[h1 as usize]).wrapping_add($self.fingerprints[h2 as usize]);
             data % ($self.ptxt_mod as u32)
         }
     };
@@ -252,7 +250,7 @@ macro_rules! bfusep_retrieve_impl(
 #[doc(hidden)]
 #[macro_export]
 macro_rules! bfusep_hash_eval_impl(
-    ($key:expr, $self:expr) => {
+    ($key:expr, $seed:expr, $segment_length:expr, $segment_length_mask:expr, $segment_count_length:expr) => {
         {
             use $crate::{
                 prelude::{
@@ -260,8 +258,8 @@ macro_rules! bfusep_hash_eval_impl(
                     bfuse::hash_of_hash
                 },
             };
-            let hash = mix256($key, &$self.seed);
-            let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
+            let hash = mix256($key, &$seed);
+            let (h0, h1, h2) = hash_of_hash(hash, $segment_length, $segment_length_mask, $segment_count_length);
             vec![h0 as usize, h1 as usize, h2 as usize]
         }
     };

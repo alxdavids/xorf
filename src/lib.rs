@@ -61,7 +61,7 @@
 //! [go]: https://github.com/FastFilter/xorfilter
 //! [c]: https://github.com/FastFilter/xor_singleheader
 
-#![no_std]
+// #![no_std]
 #![cfg_attr(feature = "nightly", feature(allocator_internals), needs_allocator)]
 #![warn(missing_docs)]
 #![forbid(clippy::all, clippy::cargo, clippy::nursery)]
