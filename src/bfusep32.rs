@@ -1,6 +1,6 @@
 //! Implements BinaryFuse16 filters.
 
-use crate::{bfusep_retrieve_impl, bfusep_from_impl, Filter};
+use crate::{bfusep_retrieve_impl, bfusep_from_impl, bfusep_hash_eval_impl, Filter};
 use alloc::{boxed::Box, vec::Vec};
 
 #[cfg(feature = "serde")]
@@ -84,6 +84,11 @@ impl BinaryFuseP32 {
     /// Retrieves the `data` modulo the plaintext modulus for a given `key`
     pub fn retrieve(&self, key: &[u64; 4]) -> u32 {
         bfusep_retrieve_impl!(key, self)
+    }
+
+    /// Retrieves the hash function evaluations for a given key
+    pub fn hash_eval(&self, key: &[u64; 4]) -> Vec<usize> {
+        bfusep_hash_eval_impl!(key, self)
     }
 }
 

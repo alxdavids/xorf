@@ -1,58 +1,6 @@
 //! Implements Binary Fuse filters.
 // Port of https://github.com/FastFilter/xorfilter/blob/master/binaryfusefilter.go
 
-use libm::{floor, fmax, log};
-
-#[inline]
-fn segment_length(arity: u32, size: u32) -> u32 {
-    if size == 0 {
-        return 4;
-    }
-
-    match arity {
-        3 => 1 << (floor(log(size as f64) / log(3.33_f64) + 2.25) as u32),
-        4 => 1 << (floor(log(size as f64) / log(2.91_f64) - 0.5) as u32),
-        _ => 65536,
-    }
-}
-
-#[inline]
-fn size_factor(arity: u32, size: u32) -> f64 {
-    match arity {
-        3 => fmax(
-            1.125_f64,
-            0.875 + 0.25 * log(1000000_f64) / log(size as f64),
-        ),
-        4 => fmax(1.075_f64, 0.77 + 0.305 * log(600000_f64) / log(size as f64)),
-        _ => 2.0,
-    }
-}
-
-#[inline]
-const fn hash_of_hash(
-    hash: u64,
-    segment_length: u32,
-    segment_length_mask: u32,
-    segment_count_length: u32,
-) -> (u32, u32, u32) {
-    let hi = ((hash as u128 * segment_count_length as u128) >> 64) as u64;
-    let h0 = hi as u32;
-    let mut h1 = h0 + segment_length;
-    let mut h2 = h1 + segment_length;
-    h1 ^= ((hash >> 18) as u32) & segment_length_mask;
-    h2 ^= (hash as u32) & segment_length_mask;
-    (h0, h1, h2)
-}
-
-#[inline]
-const fn mod3(x: u8) -> u8 {
-    if x > 2 {
-        x - 3
-    } else {
-        x
-    }
-}
-
 /// Implements `try_from(&[u64])` for an binary fuse filter of fingerprint type `$fpty`.
 #[doc(hidden)]
 #[macro_export]
@@ -67,7 +15,6 @@ macro_rules! bfusep_from_impl(
                     mix256,
                     bfuse::{segment_length, size_factor, hash_of_hash, mod3},
                 },
-                splitmix64::splitmix64,
             };
             use hashbrown::HashMap;
 
@@ -103,8 +50,6 @@ macro_rules! bfusep_from_impl(
 
             let mut fingerprints: Box<[u32]> = make_fp_block!(fp_array_len);
 
-            let mut rng = 1;
-            let mut seed = splitmix64(&mut rng);
             let capacity = fingerprints.len();
             let mut alone: Box<[u32]> = make_block!(with capacity sets);
             let mut t2count: Box<[u8]> = make_block!(with capacity sets);
@@ -298,6 +243,26 @@ macro_rules! bfusep_retrieve_impl(
                + $self.fingerprints[h1 as usize]
                + $self.fingerprints[h2 as usize];
             data % ($self.ptxt_mod as u32)
+        }
+    };
+);
+
+/// Implements `hash_eval(u64)` for a binary fuse filter with recovery modulo `ptxt_mod`.
+/// This allows an implementer to calculate the indices to which a key maps to
+#[doc(hidden)]
+#[macro_export]
+macro_rules! bfusep_hash_eval_impl(
+    ($key:expr, $self:expr) => {
+        {
+            use $crate::{
+                prelude::{
+                    mix256,
+                    bfuse::hash_of_hash
+                },
+            };
+            let hash = mix256($key, $self.seed);
+            let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
+            vec![h0 as usize, h1 as usize, h2 as usize]
         }
     };
 );
