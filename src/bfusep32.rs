@@ -91,6 +91,11 @@ impl BinaryFuseP32 {
         bfusep_retrieve_impl!(key, self)
     }
 
+    /// Returns the `fingerprints`, of the filter, but modulo the plaintetx modulus
+    pub fn get_fingerprints_mod(&self) -> Vec<u32> {
+        self.fingerprints.into_iter().map(|f| f % self.ptxt_mod).collect()
+    }
+
     /// Static function that retrieves the hash function evaluations for a given storage filter
     pub fn hash_eval(key: &[u64; 4], seed: [u8; 32], segment_length: u32, segment_length_mask: u32, segment_count_length: u32) -> Vec<usize> {
         bfusep_hash_eval_impl!(key, seed, segment_length, segment_length_mask, segment_count_length)
