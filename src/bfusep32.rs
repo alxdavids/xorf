@@ -93,7 +93,7 @@ impl BinaryFuseP32 {
 
     /// Returns the `fingerprints`, of the filter, but modulo the plaintetx modulus
     pub fn get_fingerprints_mod(&self) -> Vec<u32> {
-        self.fingerprints.into_iter().map(|f| f % self.ptxt_mod).collect()
+        self.fingerprints.into_iter().map(|f| f % (self.ptxt_mod as u32)).collect()
     }
 
     /// Static function that retrieves the hash function evaluations for a given storage filter
