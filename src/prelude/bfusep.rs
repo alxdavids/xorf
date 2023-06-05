@@ -24,7 +24,7 @@ macro_rules! bfusep_from_impl(
                 debug_assert!($ptxt_mod >= 256, "Binary Fuse filters must be constructed using a plaintext modulus >= 256.");
             }
 
-            let arity = 3u32;
+            let arity = 4u32;
             let size: usize = $keys.len();
             let segment_length: u32 = segment_length(arity, size as u32).min(262144);
             let segment_length_mask: u32 = segment_length - 1;
