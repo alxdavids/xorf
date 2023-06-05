@@ -77,13 +77,13 @@ impl BinaryFuseP32 {
         if data.len() != keys.len() {
             return Err("The data should correspond to the number of keys");
         }
-        bfusep_from_impl!(seed, keys, data, ptxt_mod, max iter 1_000)
+        bfusep_from_impl!(seed, keys, data, ptxt_mod, max iter 10_000)
     }
 
     /// Creates a new `BinaryFuseP32` filter from the specified `keys` (as a vector), `data`, `ptxt_mod`
     pub fn from_vec(seed: [u8; 32], keys: Vec<[u64; 4]>, data: &[u32], ptxt_mod: u64) -> Result<Self, &'static str> {
         let slice = keys.as_slice();
-        bfusep_from_impl!(seed, slice, data, ptxt_mod, max iter 1_000)
+        bfusep_from_impl!(seed, slice, data, ptxt_mod, max iter 10_000)
     }
 
     /// Retrieves the `data` modulo the plaintext modulus for a given `key`
