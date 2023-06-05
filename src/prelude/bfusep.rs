@@ -5,13 +5,14 @@
 #[doc(hidden)]
 #[macro_export]
 macro_rules! bfusep_from_impl(
-    ($seed:ident, $keys:ident, $data:ident, $ptxt_mod:ident, max iter $max_iter:expr) => {
+    ($seed:ident, $keys:ident, $data:ident, $ptxt_mod:ident, $label:ident, max iter $max_iter:expr) => {
         {
             use libm::round;
             use $crate::{
                 make_block,
                 make_fp_block,
                 prelude::{
+                    mix,
                     mix256,
                     bfuse::{segment_length, size_factor, hash_of_hash, mod3},
                 },
@@ -209,7 +210,8 @@ macro_rules! bfusep_from_impl(
                 (data % ($ptxt_mod as u32))
                 .wrapping_sub(fingerprints[h012[found + 1] as usize])
                 .wrapping_sub(fingerprints[h012[found + 2] as usize]) % ($ptxt_mod as u32);
-                fingerprints[h012[found] as usize] = entry % ($ptxt_mod as u32);
+                let mask = (mix(hash, $label) % $ptxt_mod) as u32;
+                fingerprints[h012[found] as usize] = entry.wrapping_sub(mask) % ($ptxt_mod as u32);
             }
 
             Ok(Self {
@@ -229,10 +231,11 @@ macro_rules! bfusep_from_impl(
 #[doc(hidden)]
 #[macro_export]
 macro_rules! bfusep_retrieve_impl(
-    ($key:expr, $self:expr) => {
+    ($key:expr, $label:expr, $self:expr) => {
         {
             use $crate::{
                 prelude::{
+                    mix,
                     mix256,
                     bfuse::hash_of_hash
                 },
@@ -240,7 +243,8 @@ macro_rules! bfusep_retrieve_impl(
             let hash = mix256($key, &$self.seed);
             let (h0, h1, h2) = hash_of_hash(hash, $self.segment_length, $self.segment_length_mask, $self.segment_count_length);
             let data = $self.fingerprints[h0 as usize].wrapping_add($self.fingerprints[h1 as usize]).wrapping_add($self.fingerprints[h2 as usize]);
-            data % ($self.ptxt_mod as u32)
+            let mask = (mix(hash, $label) % $self.ptxt_mod) as u32;
+            data.wrapping_add(mask) % ($self.ptxt_mod as u32)
         }
     };
 );

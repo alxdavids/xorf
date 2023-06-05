@@ -53,7 +53,7 @@ pub fn mix256<'a>(key: &[u64; 4], seed: &[u8]) -> u64 {
     key.into_iter().map(|k| {
         let mut mixed = 0u64;
         for i in 0..4 {
-            mixed = mix(*k, seeds[i]);
+            mixed += mix(*k, seeds[i]);
         }
         mixed
     }).fold(0, |acc, r| acc.overflowing_add(r).0)
