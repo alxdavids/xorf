@@ -1,6 +1,6 @@
 //! Implements BinaryFuse16 filters.
 
-use crate::{bfusep_retrieve_impl, bfusep_from_impl, bfusep_hash_eval_impl, Filter};
+use crate::{bfusep_retrieve_impl, bfusep_from_impl, bfusep_hash_eval_impl, Filter, bfusep_key_fingerprint_impl};
 use alloc::{boxed::Box, vec::Vec};
 
 #[cfg(feature = "serde")]
@@ -100,6 +100,11 @@ impl BinaryFuseP32 {
     /// Static function that retrieves the hash function evaluations for a given storage filter
     pub fn hash_eval(key: &[u64; 4], seed: [u8; 32], segment_length: u32, segment_length_mask: u32, segment_count_length: u32) -> Vec<usize> {
         bfusep_hash_eval_impl!(key, seed, segment_length, segment_length_mask, segment_count_length)
+    }
+    
+    /// Static function that outputs the `u64` fingerprint of a `key`, wrt to a `seed` and a `label`
+    pub fn get_key_fingerprint(key: &[u64; 4], seed: [u8; 32], label: u64) -> u64 {
+        bfusep_key_fingerprint_impl!(key, seed, label)
     }
 }
 

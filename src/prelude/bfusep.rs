@@ -268,3 +268,21 @@ macro_rules! bfusep_hash_eval_impl(
         }
     };
 );
+
+/// Implements `mix(hash(key), label)` a given input key
+#[doc(hidden)]
+#[macro_export]
+macro_rules! bfusep_key_fingerprint_impl(
+    ($key:expr, $seed:expr, $label:expr) => {
+        {
+            use $crate::{
+                prelude::{
+                    mix,
+                    mix256,
+                },
+            };
+            let hash = mix256($key, &$seed);
+            mix(hash, $label)
+        }
+    };
+);
