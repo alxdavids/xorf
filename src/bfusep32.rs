@@ -111,7 +111,6 @@ impl BinaryFuseP32 {
 #[cfg(test)]
 mod test {
     use crate::{BinaryFuseP32, Filter};
-    use crate::prelude::{mix,mix256};
 
     use alloc::vec::Vec;
     use rand::{Rng, RngCore};
@@ -151,9 +150,8 @@ mod test {
         for i in 0..keys.len() {
             let h = BinaryFuseP32::hash_eval(&keys[i], seed, filter.segment_length, filter.segment_length_mask, filter.segment_count_length);
             let entry = h.iter().fold(0u32, |acc, r| acc.wrapping_add(filter.fingerprints[*r]));
-            let hash = mix256(&keys[i], &seed);
-            let mask = (mix(hash, label) % filter.ptxt_mod) as u32;
-            assert_eq!(data[i], entry.wrapping_add(mask) % filter.ptxt_mod as u32);
+            let mask = crate::bfusep_key_fingerprint_impl!(&keys[i], seed, label as u64);
+            assert_eq!(data[i], entry.wrapping_add(mask as u32) % filter.ptxt_mod as u32);
         }
     }
 
