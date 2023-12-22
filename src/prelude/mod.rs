@@ -1,9 +1,9 @@
 //! Common methods for xor filters.
 
-#[cfg(feature = "binary-fuse-modp")]
-pub mod bfusep;
 #[cfg(feature = "binary-fuse")]
 pub mod bfuse;
+#[cfg(feature = "binary-fuse-modp")]
+pub mod bfusep;
 pub mod fuse;
 pub mod xor;
 
@@ -48,15 +48,17 @@ pub fn mix256<'a>(key: &[u64; 4], seed: &[u8]) -> u64 {
         panic!("Incompatible seed length: {}", seed.len());
     }
     for i in 0..4 {
-        seeds[i] = u64::from_le_bytes(seed[8*i..8*(i+1)].try_into().unwrap());
+        seeds[i] = u64::from_le_bytes(seed[8 * i..8 * (i + 1)].try_into().unwrap());
     }
-    key.into_iter().map(|k| {
-        let mut mixed = 0u64;
-        for i in 0..4 {
-            mixed += mix(*k, seeds[i]);
-        }
-        mixed
-    }).fold(0, |acc, r| acc.overflowing_add(r).0)
+    key.into_iter()
+        .map(|k| {
+            let mut mixed = 0u64;
+            for i in 0..4 {
+                mixed = murmur3::mix64(mixed.overflowing_add(mix(*k, seeds[i])).0);
+            }
+            mixed
+        })
+        .fold(0, |acc, r| acc.overflowing_add(r).0)
 }
 
 /// Computes a fingerprint.
